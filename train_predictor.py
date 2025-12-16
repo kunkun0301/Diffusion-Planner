@@ -18,6 +18,7 @@ from diffusion_planner.utils import ddp
 
 from diffusion_planner.train_epoch import train_epoch
 
+
 def boolean(v):
     if isinstance(v, bool):
         return v
@@ -27,6 +28,7 @@ def boolean(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
 
 def get_args():
     # Arguments
@@ -98,12 +100,21 @@ def get_args():
     parser.add_argument('--ddp', default=True, type=boolean, help='use ddp or not')
     parser.add_argument('--port', default='22323', type=str, help='port')
 
+    # 新增: 短期 horizon 和长短期解码器开关
+    parser.add_argument('--short_future_len', type=int, help='short-term horizon length', default=None)
+    parser.add_argument('--use_longshort_decoder', default=False, type=boolean, help='use long-short decoder instead of original decoder')
+
     args = parser.parse_args()
+
+    # 如果未显式指定 short_future_len，则默认取 future_len 的一半
+    if args.short_future_len is None:
+        args.short_future_len = args.future_len // 2
 
     args.state_normalizer = StateNormalizer.from_json(args)
     args.observation_normalizer = ObservationNormalizer.from_json(args)
     
     return args
+
 
 def model_training(args):
 
@@ -197,8 +208,6 @@ def model_training(args):
             print(f"Epoch {epoch+1}/{train_epochs}")
         train_loss, train_total_loss = train_epoch(train_loader, diffusion_planner, optimizer, args, model_ema, aug)
         
-
-
         if global_rank == 0:
             lr_dict = {'lr': optimizer.param_groups[0]['lr']}
             wandb_logger.log_metrics({f"train_loss/{k}": v for k, v in train_loss.items()}, step=epoch+1)
@@ -211,6 +220,7 @@ def model_training(args):
 
         scheduler.step()
         train_sampler.set_epoch(epoch + 1)
+
 
 if __name__ == "__main__":
 

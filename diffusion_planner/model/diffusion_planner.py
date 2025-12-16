@@ -1,9 +1,9 @@
-
 import torch
 import torch.nn as nn
 
 from diffusion_planner.model.module.encoder import Encoder
 from diffusion_planner.model.module.decoder import Decoder
+from diffusion_planner.model.module.long_short_decoder import LongShortDecoder  # 新增
 
 
 class Diffusion_Planner(nn.Module):
@@ -63,7 +63,12 @@ class Diffusion_Planner_Decoder(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.decoder = Decoder(config)
+        # 新增: 可在 config 中通过 use_longshort_decoder 选择解码器类型
+        if getattr(config, "use_longshort_decoder", False):
+            self.decoder = LongShortDecoder(config)
+        else:
+            self.decoder = Decoder(config)
+
         self.initialize_weights()
 
     def initialize_weights(self):
@@ -80,20 +85,23 @@ class Diffusion_Planner_Decoder(nn.Module):
                 nn.init.normal_(m.weight, mean=0.0, std=0.02)
         self.apply(_basic_init)
 
+        # 兼容 Decoder 和 LongShortDecoder 的 DiT 命名
+        core_dit = self.decoder.dit if hasattr(self.decoder, "dit") else self.decoder.dit_full
+
         # Initialize timestep embedding MLP:
-        nn.init.normal_(self.decoder.dit.t_embedder.mlp[0].weight, std=0.02)
-        nn.init.normal_(self.decoder.dit.t_embedder.mlp[2].weight, std=0.02)
+        nn.init.normal_(core_dit.t_embedder.mlp[0].weight, std=0.02)
+        nn.init.normal_(core_dit.t_embedder.mlp[2].weight, std=0.02)
 
         # Zero-out adaLN modulation layers in DiT blocks:
-        for block in self.decoder.dit.blocks:
+        for block in core_dit.blocks:
             nn.init.constant_(block.adaLN_modulation[-1].weight, 0)
             nn.init.constant_(block.adaLN_modulation[-1].bias, 0)
 
         # Zero-out output layers:
-        nn.init.constant_(self.decoder.dit.final_layer.adaLN_modulation[-1].weight, 0)
-        nn.init.constant_(self.decoder.dit.final_layer.adaLN_modulation[-1].bias, 0)
-        nn.init.constant_(self.decoder.dit.final_layer.proj[-1].weight, 0)
-        nn.init.constant_(self.decoder.dit.final_layer.proj[-1].bias, 0)
+        nn.init.constant_(core_dit.final_layer.adaLN_modulation[-1].weight, 0)
+        nn.init.constant_(core_dit.final_layer.adaLN_modulation[-1].bias, 0)
+        nn.init.constant_(core_dit.final_layer.proj[-1].weight, 0)
+        nn.init.constant_(core_dit.final_layer.proj[-1].bias, 0)
 
     def forward(self, encoder_outputs, inputs):
 
