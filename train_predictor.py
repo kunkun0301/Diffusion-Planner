@@ -102,7 +102,7 @@ def get_args():
 
     # 新增: 短期 horizon 和长短期解码器开关
     parser.add_argument('--short_future_len', type=int, help='short-term horizon length', default=None)
-    parser.add_argument('--use_longshort_decoder', default=False, type=boolean, help='use long-short decoder instead of original decoder')
+    parser.add_argument('--use_longshort_decoder', default=True, type=boolean, help='use long-short decoder instead of original decoder')
 
     args = parser.parse_args()
 
