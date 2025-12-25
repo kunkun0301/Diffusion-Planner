@@ -10,9 +10,10 @@ TRAIN_SET_PATH="/root/zhaonankun/diffusion_planner_train_npz" # preprocess data 
 TRAIN_SET_LIST_PATH="/root/zhaonankun/Diffusion-Planner/diffusion_planner_training.json"
 ###################################
 
-$RUN_PYTHON_PATH -m torch.distributed.run --nnodes 1 --nproc-per-node 1 --standalone train_predictor.py \
+$RUN_PYTHON_PATH -m torch.distributed.run --nnodes 1 --nproc-per-node 4 --standalone train_predictor.py \
 --train_set  $TRAIN_SET_PATH \
 --train_set_list  $TRAIN_SET_LIST_PATH \
---train_epochs 1 \
---warm_up_epoch 0 \
---batch_size 64 \
+--train_epochs 400 \
+--warm_up_epoch 5 \
+--batch_size 512 \
+--resume_model_path /root/zhaonankun/Diffusion-Planner/training_log/diffusion-planner-training/2025-12-17-15:53:17 \
